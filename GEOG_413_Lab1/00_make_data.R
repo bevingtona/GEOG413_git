@@ -50,7 +50,7 @@ lakes <- bcdc_query_geodata("freshwater-atlas-lakes") |>
 st_write(lakes, gpkg, layer = "lakes", quiet = TRUE, delete_layer = T)
 
 # 4. Cutblocks ----------------------------------------------------------
-message("Downloading stream cutblocks...")
+message("Downloading cutblocks...")
 cutblocks <- bcdc_query_geodata("harvested-areas-of-bc-consolidated-cutblocks-") |>
   filter(INTERSECTS(ws)) |>
   select(HARVEST_START_DATE) |>
