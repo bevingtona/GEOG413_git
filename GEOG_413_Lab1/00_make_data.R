@@ -65,7 +65,7 @@ st_write(cutblocks, gpkg, layer = "cutblocks", quiet = TRUE, delete_layer = T)
 message("Downloading historical cutblocks...")
 fires <- bcdc_query_geodata("bc-wildfire-fire-perimeters-historical") |>
   filter(INTERSECTS(ws)) |>
-  select(FIRE_NUMBER, FIRE_YEAR, FIRE_CAUSE) |>
+  select(FIRE_NUMBER, FIRE_YEAR, FIRE_CAUSE) |> 
   collect() |>
   select(FIRE_NUMBER, FIRE_YEAR, FIRE_CAUSE) |>
   st_intersection(st_geometry(ws)) |>

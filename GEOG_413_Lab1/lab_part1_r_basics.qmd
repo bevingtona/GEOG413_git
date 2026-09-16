@@ -103,7 +103,15 @@ Managing the working directory is important!
 
 Projects in R Studio, make it so that all code in the project uses a common working directory, which helps make the code more portable. 
 
-*File → New Project → Existing Directory →* your cloned lab repo. This creates a `.Rproj` file; double-click it to open the project. With it open, the working directory is the project folder, always, on every machine.
+*File → New Project → * ... there are three options. 
+
+### Get data for Lab
+
+```{r}
+setwd("K:/")
+system("git clone https://github.com/bevingtona/GEOG413_git") 
+```
+
 
 ```{r}
 #| label: project
