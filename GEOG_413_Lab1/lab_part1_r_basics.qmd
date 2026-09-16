@@ -112,6 +112,16 @@ setwd("K:/")
 system("git clone https://github.com/bevingtona/GEOG413_git") 
 ```
 
+Open the `GEOG_413_Labs.Rproj`
+
+```{r}
+setwd("K:/GEOG413_git/")
+source("GEOG_413_Lab1/00_make_data.R")
+```
+
+```{r}
+
+```
 
 ```{r}
 #| label: project
