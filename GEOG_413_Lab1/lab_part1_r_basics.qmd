@@ -1,0 +1,724 @@
+---
+title: "Lab 1, Part 1 — R, RStudio, the Tidyverse and `sf`"
+subtitle: "GEOG 413 — Advanced GIS"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    code-tools: true
+    code-copy: true
+    embed-resources: false
+    theme: default
+execute:
+  echo: true
+  message: false
+  warning: false
+  cache: true
+  fig-width: 8
+  fig-height: 5
+editor_options:
+  chunk_output_type: console
+---
+
+```{=html}
+<style>
+body { font-family: Calibri, "Segoe UI", Arial, sans-serif; }
+</style>
+
+options("mapviewBasemaps" = c("Esri.WorldGrayCanvas","OpenStreetMap", "Esri.WorldImagery", "OpenTopoMap"))
+
+```
+
+## Purpose {.unnumbered}
+
+Part 1 gets you from a fresh install to a rendered document that reads spatial data, summarises it and maps it. Part 2 (*Simple Features in R with sf*) then works through the `sf` package properly. Everything runs on `data/chilako.gpkg` from the course site.
+
+Work through it in order, typing the code into your own `part1.qmd`. Render at the end of every section.
+
+## Welcome to RStudio
+
+### RStudio basics
+
+**R** is the language and the engine. **RStudio** is the workbench around it (The "IDE"). The RStudio IDE typically has four panes that can be customized. Here is what they do: 
+
+| Pane | Use it for |
+|---|---|
+| Source (top-left) | Scripts and `.qmd` files — things you keep |
+| Console (bottom-left) | Trying one line; nothing here is saved |
+| Environment / History (top-right) | What objects exist right now |
+| Files / Plots / Packages / Help (bottom-right) | Browsing, looking at maps, reading docs |
+
+```{r}
+#| label: basics
+# This is a comment. R ignores everything after '#'.
+2 + 2 # put the cursor on this line and press Ctrl+Enter
+x <- 10 # assignment; x appears in the Environment pane (similar to '=')
+x * 3
+```
+
+```{r}
+#| label: help
+#| eval: false
+?mean # help for one function (or highlight a function and press F1)
+??"standard deviation" # search all installed help
+```
+
+Shortcuts to learn today:
+
+| Keys | Does |
+|---|---|
+| Ctrl+Enter | run the current line or selection |
+| Ctrl+Shift+Enter | run the whole chunk |
+| Ctrl+Shift+M | insert a pipe `|>` |
+| Alt+- | insert left-assignment `<-` 
+| Ctrl+Shift+C | comment / uncomment |
+| Ctrl+Shift+K | render the document |
+| Ctrl+Shift+F10 | restart R |
+| Tab | autocomplete — start typing a function then Tab |
+
+### RStudio settings (no `.RData`!)
+
+*Tools → Global Options → General*:
+
+- Your script should rebuild everything from the data files, not from restoring previously assigned variables. A saved workspace hides the fact that a script may no longer work. Another way to do this is : *Session → Restart R*, then run your script from top to bottom.
+
+  - **Untick** *Restore most recently opened project at startup *
+  - **Untick** *Restore .RData into workspace at startup*
+  - Set *Save workspace to .RData on exit* to **Never**
+
+- *Tools → Global Options → Code*: 
+
+  - Turn on *Use native pipe operator, |>*. Some of you may be familiar with the `dplyr` pipe (`%>%`), now there is a pipe built into R!
+  - Under *Display*, tick *Show line numbers* and turn on *Use rainbow parentheses*!
+
+### The Working Directory
+
+The working directory can bee seen at the top of the Console pane. You can also find it through code with `getwd()`, and you can change it with `setwd()`. Keep in mind file paths in R need to have 
+- Wrong: `K:\GEOG413_git\GEOG_413_Lab1`
+- Right: `K:/GEOG413_git/GEOG_413_Lab1`
+Managing the working directory is important! 
+
+### RStudio Projects
+
+Projects in R Studio, make it so that all code in the project uses a common working directory, which helps make the code more portable. 
+
+*File → New Project → Existing Directory →* your cloned lab repo. This creates a `.Rproj` file; double-click it to open the project. With it open, the working directory is the project folder, always, on every machine.
+
+```{r}
+#| label: project
+getwd()
+list.files(path = "data")
+```
+
+```{r}
+#| label: setwd
+#| eval: false
+# Avoid this! It exists on exactly one computer.
+setwd("C:/Users/mycomputer/OneDrive/UNBC/GEOG413/lab")
+```
+
+A tidy project:
+
+```
+geog413-lab/
+├── data/        inputs (add to .gitignore — never commit data to GitHub)
+├── outputs/     what you make
+├── part1.qmd
+└── geog413-lab.Rproj
+```
+
+```{r}
+#| label: outputs-dir
+dir.create("outputs", showWarnings = FALSE)
+```
+
+### Managing libraries
+
+```{r}
+#| label: install
+#| eval: false
+install.packages("sf") # once per computer
+install.packages(c("dplyr", "ggplot2", "mapview", "units", "ggspatial"))
+```
+
+```{r}
+#| label: library
+library(sf) # once per session
+packageVersion("sf")
+```
+
+`pkg::fun` calls a function without `library()`, and resolves name clashes (`dplyr::filter` vs `stats::filter`). `sessionInfo()` lists everything loaded — paste it into bug reports. `update.packages(ask = FALSE)` occasionally, not the night before a deadline.
+
+### `.R` vs `.Rmd` vs `.qmd`
+
+**`.R`** — plain code, run top to bottom with `source("analysis.R")`. For helper functions and data prep.
+
+```{r}
+#| label: dot-r
+#| eval: false
+library(sf)
+ws <- st_read("data/chilako.gpkg", layer = "watershed")
+plot(st_geometry(ws))
+```
+
+**`.qmd`** — Quarto: prose and code together, rendered to HTML with Ctrl+Shift+K.
+
+````markdown
+---
+title: "Chilako watershed"
+format: html
+---
+
+The watershed boundary comes from the Freshwater Atlas.
+
+```{{r}}
+library(sf)
+ws <- st_read("data/chilako.gpkg", layer = "watershed")
+plot(st_geometry(ws))
+```
+
+It covers `r knitr::inline_expr("round(ws$AREA_HA)")` hectares.
+````
+
+The last line is *inline code*: a number in your prose that recalculates when the data change.
+
+**`.Rmd`** is the older R Markdown. Same idea, same chunks. The visible differences: chunk options go inside the chunk as `#| label: read-ws` in Quarto rather than `{r read-ws, echo=FALSE}` in R Markdown; Quarto also renders Python and Julia and has better defaults for HTML, PDF, slides and websites. **Write `.qmd`.** Read `.Rmd` when you find it.
+
+## Basic R
+
+### Data manipulation
+
+**Vectors** hold many values of one type.
+
+```{r}
+#| label: vectors
+years  <- c(2015, 2018, 2021)              # numeric
+sites  <- c("CHK-01", "CHK-02", "CHK-03")  # character
+active <- c(TRUE, FALSE, TRUE)             # logical
+
+years[2]                                   # index from 1, not 0 like python
+years[years > 2016]                        # logical subsetting
+length(years)           
+class(years)          
+```
+
+A **data.frame** is a table: each column is a vector of one type.
+
+```{r}
+#| label: dataframe
+loggers <- data.frame(site = sites, year = years, active = active)
+loggers
+loggers$year                               # one column, as a vector
+loggers[2, ]                               # one row
+loggers[loggers$active, "site"]            # rows where active, column site
+nrow(loggers); ncol(loggers); names(loggers)
+str(loggers)
+```
+
+A **list** holds anything in any mix. Geometry columns in `sf` are lists — you'll meet them in Part 2.
+
+```{r}
+#| label: list
+config <- list(watershed = "Chilako River", crs = 3005, years = years)
+config$watershed
+config[["crs"]]
+str(config)
+```
+
+**Types and conversion.**
+
+```{r}
+#| label: types
+x <- "2018"
+class(x)
+as.numeric(x) + 1
+as.character(2018)
+as.numeric("abc")                          # NA with a warning: check your data
+```
+
+**Dates** are strings until you say otherwise.
+
+YYYY-MM-DD PREFERRED!!!!! 
+%Y-%m-%d
+
+```{r}
+#| label: dates
+d <- "2018-07-15"
+class(d)
+d <- as.Date(d)                            # ISO format needs no template
+class(d)
+d + 30
+format(d, "%Y")                            # the year, as text
+as.numeric(format(d, "%Y"))                # ...as a number
+as.Date("15/07/2018", format = "%d/%m/%Y") # non-ISO: describe the pieces
+```
+
+**Factors** are categories with fixed levels; ggplot uses them for ordering.
+
+```{r}
+#| label: factors
+cause <- factor(c("Lightning", "Person", "Lightning", "Lightning", "Lightning", "Lightning", "Lightning"))
+print(cause)
+levels(cause); 
+table(cause)
+```
+
+**Missing values** poison arithmetic unless you say what to do with them.
+
+```{r}
+#| label: na
+v <- c(3, NA, 7)
+mean(v)
+mean(v, na.rm = TRUE)
+```
+
+### Create a table
+
+```{r}
+#| label: tibble
+library(dplyr)
+loggers <- tibble( # a tibble is a data.frame that prints better
+  site   = c("CHK-01", "CHK-02", "CHK-03"),
+  elev_m = c(720, 860, 1010),
+  lon    = c(-123.30, -123.65, -123.95),
+  lat    = c(53.75, 53.55, 53.40))
+loggers
+```
+
+Write it out and read it back:
+
+```{r}
+#| label: csv
+write.csv(loggers, "data/loggers.csv", row.names = FALSE)
+
+# Base R version
+loggers <- read.csv("data/loggers.csv")
+loggers
+str(loggers)
+summary(loggers)
+
+# Tidy R version
+loggers <- readr::read_csv("data/loggers.csv")
+loggers
+str(loggers)
+summary(loggers)
+```
+
+`View(loggers)` opens a spreadsheet view in RStudio. In a rendered document, use a proper table:
+
+```{r}
+#| label: kable
+# Table for rendering into a document:
+knitr::kable(loggers, digits = 2, caption = "Stream-temperature loggers")
+```
+
+### Basic plotting
+
+Base R plotting needs no packages and is fine for looking. Not for publishing.
+
+```{r}
+#| label: base-plot
+plot(x = loggers$elev_m, 
+     y = loggers$lat, 
+     pch = 16, 
+     col = "steelblue",
+     xlab = "Elevation (m)", 
+     ylab = "Latitude", 
+     main = "Loggers")
+text(loggers$elev_m, loggers$lat, loggers$site, pos = 1)
+```
+
+```{r}
+#| label: base-plot-2
+#| fig-height: 3.5
+par(mfrow = c(1, 3))
+hist(rnorm(100))
+barplot(c(a = 3, b = 7, c = 5))
+boxplot(elev_m ~ site, data = loggers)
+```
+
+```{r}
+#| label: base-save
+#| eval: false
+png("outputs/loggers_base.png", width = 800, height = 600)
+plot(loggers$elev_m, loggers$lat, pch = 16)
+dev.off()
+```
+
+### Tidyverse syntax
+
+We'll use the fire attribute table. For now the geometry is dropped; it comes back in the `sf` section.
+
+```{r}
+#| label: fires-table
+fires <- st_read("data/chilako.gpkg", layer = "fires", quiet = TRUE) |> st_drop_geometry()
+head(fires)
+```
+
+**The pipe** `|>` reads as "take this, *then* do that". Ctrl+Shift+M types it.
+
+```{r}
+#| label: pipe
+# Without: read from the inside out
+head(arrange(filter(fires, FIRE_YEAR >= 2000), FIRE_YEAR))
+
+# With: read top to bottom
+fires |>
+  filter(FIRE_YEAR >= 2000) |>
+  arrange(FIRE_YEAR) |>
+  head()
+```
+
+**`select()`** — columns.
+
+```{r}
+#| label: select
+fires |> select(FIRE_NUMBER, FIRE_YEAR) |> head(3)
+fires |> select(-FIRE_CAUSE) |> head(3)
+fires |> select(starts_with("FIRE_Y")) |> head(3)
+```
+
+**`filter()`** — rows.
+
+```{r}
+#| label: filter
+fires |> filter(FIRE_YEAR >= 2010) |> nrow()
+fires |> filter(FIRE_YEAR >= 2010, FIRE_CAUSE == "Lightning") |> nrow()   # AND
+fires |> filter(FIRE_YEAR < 1950 | FIRE_YEAR > 2015) |> nrow()            # OR
+fires |> filter(!is.na(FIRE_CAUSE)) |> nrow()
+```
+
+**`mutate()`** — new or changed columns.
+
+```{r}
+#| label: mutate
+fires |>
+  mutate(decade = floor(FIRE_YEAR / 10) * 10,
+         recent = FIRE_YEAR >= 2010) |>
+  head()
+```
+
+**`group_by()` + `summarise()`** — one row per group.
+
+```{r}
+#| label: summarise
+fires |>
+  group_by(FIRE_CAUSE) |>
+  summarise(n = n(),
+            first = min(FIRE_YEAR),
+            last  = max(FIRE_YEAR))
+```
+
+All together, with `arrange()`:
+
+```{r}
+#| label: together
+fires |>
+  mutate(decade = floor(FIRE_YEAR / 10) * 10) |>
+  group_by(decade, FIRE_CAUSE) |>
+  summarise(n = n(), .groups = "drop") |>
+  arrange(desc(n)) |>
+  head()
+```
+
+`count()` is `group_by()` + `summarise(n = n())` in one call:
+
+```{r}
+#| label: count
+fires |> count(FIRE_CAUSE, sort = TRUE)
+```
+
+### Tidyverse and ggplot2
+
+The grammar: **data** + **aes** (which columns map to what) + **geom** (how to draw it).
+
+```{r}
+#| label: cutblocks-table
+library(ggplot2)
+cutblocks <- st_read("data/chilako.gpkg", layer = "cutblocks", quiet = TRUE) |>
+  mutate(area_ha = as.numeric(units::set_units(st_area(geom), ha))) |>
+  st_drop_geometry()
+
+ggplot(cutblocks, aes(x = HARVEST_YEAR)) +
+  geom_histogram(binwidth = 1)
+```
+
+Pipe straight from a summary into a plot:
+
+```{r}
+#| label: gg-col
+cutblocks |>
+  group_by(HARVEST_YEAR) |>
+  summarise(area_ha = sum(area_ha)) |>
+  ggplot(aes(HARVEST_YEAR, area_ha)) +
+  geom_col() +
+  labs(x = "Harvest year", y = "Area (ha)", title = "Harvest history, Chilako River") +
+  theme_minimal()
+```
+
+Boxplot by group, on a log axis:
+
+```{r}
+#| label: gg-box
+fires <- st_read("data/chilako.gpkg", layer = "fires", quiet = TRUE) |>
+  mutate(area_ha = as.numeric(units::set_units(st_area(geom), ha))) |>
+  st_drop_geometry()
+
+ggplot(fires, aes(FIRE_CAUSE, area_ha)) +
+  geom_boxplot() +
+  scale_y_log10()
+```
+
+Scatter with a smoother:
+
+```{r}
+#| label: gg-scatter
+ggplot(cutblocks, aes(HARVEST_YEAR, area_ha)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth() +
+  scale_y_log10()
+```
+
+Lines, one per group:
+
+```{r}
+#| label: gg-line
+fires |>
+  mutate(decade = floor(FIRE_YEAR / 10) * 10) |>
+  count(decade, FIRE_CAUSE) |>
+  ggplot(aes(decade, n, colour = FIRE_CAUSE)) +
+  geom_line() + geom_point()
+```
+
+Facets, one panel per group:
+
+```{r}
+#| label: gg-facet
+ggplot(fires, aes(area_ha)) +
+  geom_histogram(bins = 20) +
+  facet_wrap(~ FIRE_CAUSE, scales = "free_y") +
+  scale_x_log10()
+```
+
+Save:
+
+```{r}
+#| label: gg-save
+p <- ggplot(cutblocks, aes(HARVEST_YEAR)) + geom_histogram(binwidth = 1)
+ggsave("outputs/harvest_hist.png", p, width = 8, height = 5, dpi = 200)
+```
+
+## Introduction to `sf`
+
+### Read/write
+
+```{r}
+#| label: sf-read
+st_layers("data/chilako.gpkg")
+
+ws        <- st_read("data/chilako.gpkg", layer = "watershed", quiet = TRUE)
+streams   <- st_read("data/chilako.gpkg", layer = "streams",   quiet = TRUE)
+lakes     <- st_read("data/chilako.gpkg", layer = "lakes",     quiet = TRUE)
+cutblocks <- st_read("data/chilako.gpkg", layer = "cutblocks", quiet = TRUE)
+fires     <- st_read("data/chilako.gpkg", layer = "fires",     quiet = TRUE)
+
+ws
+```
+
+Read the header before anything else: number of features and fields, geometry type, bounding box, CRS.
+
+```{r}
+#| label: sf-write
+st_write(ws, "outputs/ws.gpkg", layer = "watershed", delete_layer = TRUE, quiet = TRUE)
+```
+
+```{r}
+#| label: sf-write-other
+#| eval: false
+st_write(ws, "outputs/ws.shp")        # can, but don't: 10-character names, 3+ files, lossy CRS
+st_write(st_transform(ws, 4326), "outputs/ws.geojson")   # web formats want WGS 84
+```
+
+### Geometry types
+
+```{r}
+#| label: geom-types
+st_geometry_type(ws)
+st_geometry_type(streams) |> unique()
+```
+
+Each type can be built by hand:
+
+```{r}
+#| label: geom-build
+pt   <- st_point(c(1150000, 980000))
+ln   <- st_linestring(rbind(c(1120000, 970000), c(1180000, 1010000)))
+poly <- st_polygon(list(rbind(c(0, 0), c(1, 0), c(1, 1), c(0, 1), c(0, 0))))   
+class(pt)
+
+# add a CRS and attributes
+line_sf <- st_sf(name = "transect", geometry = st_sfc(ln, crs = 3005)) 
+
+line_sf
+```
+
+Cast between types; make points from polygons:
+
+```{r}
+#| label: geom-cast
+nrow(streams)
+streams |> st_cast("LINESTRING") |> nrow()      # multi → single: more rows
+st_centroid(lakes) |> head(3)
+```
+
+### Predicates and operations
+
+```{r}
+#| label: predicates
+#| cache: false
+
+library(mapview)
+big_fire <- fires |> slice_max(st_area(geom), n = 1)
+
+st_intersects(big_fire, cutblocks)              # sparse list of matching indices
+st_intersects(big_fire, cutblocks, sparse = FALSE) |> sum()
+
+cutblocks[big_fire, ] |> nrow()                 # subset: intersects by default
+cutblocks[big_fire, , op = st_within] |> nrow() # any predicate via op
+cutblocks |> st_filter(big_fire) |> nrow()      # same, pipeable
+cutblocks_bigfire <- cutblocks |> st_filter(big_fire)
+
+mapview(big_fire, col.regions = "red") + 
+  mapview::mapview(cutblocks_bigfire, col.regions = "green")
+
+cutblocks_bigfire_nearlake <- cutblocks_bigfire |> 
+  st_is_within_distance(lakes, units::set_units(200, m))
+
+mapview(big_fire, col.regions = "red") + 
+  mapview(cutblocks_bigfire, col.regions = "green") + 
+  mapview(cutblocks_bigfire[lengths(cutblocks_bigfire_nearlake) > 0, ], col.regions = "blue")
+```
+
+Measures come back with units:
+
+```{r}
+#| label: measures
+st_area(ws) |> units::set_units(km^2)
+st_length(streams) |> sum() |> units::set_units(km)
+```
+
+Geometry operations:
+
+```{r}
+#| label: geom-ops
+#| eval: false
+st_union(cutblocks)                             # dissolve everything to one
+st_intersection(cutblocks, big_fire)            # clip
+st_difference(big_fire, st_union(cutblocks))    # erase
+st_buffer(lakes, 200)
+st_make_valid(cutblocks)
+```
+
+### Tidyverse
+
+The dplyr verbs work on `sf` objects and the geometry comes along.
+
+```{r}
+#| label: sf-tidy
+cutblocks |> filter(HARVEST_YEAR >= 2010) |> nrow()
+cutblocks |> select(HARVEST_YEAR) |> head(2)
+cutblocks |> mutate(area_ha = st_area(geom)) |> head(2)
+```
+
+`summarise()` on an `sf` object unions the geometry of each group — a dissolve:
+
+```{r}
+#| label: sf-dissolve
+cb_decade <- cutblocks |>
+  mutate(decade = floor(HARVEST_YEAR / 10) * 10) |>
+  group_by(decade) |>
+  summarise(n = n())
+cb_decade
+```
+
+Drop the geometry when you only want a table:
+
+```{r}
+#| label: sf-drop
+cutblocks |> st_drop_geometry() |> count(HARVEST_YEAR) |> head(3)
+```
+
+A CSV with coordinates becomes spatial with `st_as_sf()` — say which columns, and what CRS they're in:
+
+```{r}
+#| label: csv-to-sf
+loggers_sf <- read.csv("data/loggers.csv") |>
+  st_as_sf(coords = c("lon", "lat"), crs = 4326) |>
+  st_transform(3005)
+loggers_sf
+```
+
+### Plotting with ggplot2
+
+```{r}
+#| label: gg-map
+#| fig-height: 8
+ggplot() +
+  geom_sf(data = ws, fill = "grey95") +
+  
+  geom_sf(data = fires, aes(fill = "Fire"), alpha = 0.4, colour = NA) +
+  scale_fill_manual(name = "Wildfire", values = "red") +
+  ggnewscale::new_scale_fill() +
+  
+  geom_sf(data = cutblocks, aes(fill = HARVEST_YEAR), colour = NA) +
+  scale_fill_viridis_c(name = "Harvest year") +
+  ggnewscale::new_scale_fill() +
+  
+  geom_sf(data = streams, aes(linewidth = STREAM_ORDER), colour = "steelblue") +
+  scale_linewidth(name = "Stream Order", range = c(0.2, 1)) +
+  
+  geom_sf(data = lakes, fill = "steelblue", colour = NA) +
+  
+  # ADD LOGGER POINTS AND LABELS 
+  geom_sf(data = loggers_sf, colour = "red", size = 2) +
+  geom_sf_label(data = loggers_sf, aes(label = site), nudge_y = 2000, size = 3) +
+  
+  # ADD STYLE
+  ggspatial::annotation_scale(location = "bl") +
+  ggspatial::annotation_north_arrow(location = "tr") +
+  labs(title = "Chilako River watershed", x = "", y = "") + 
+  theme_bw()
+
+ggsave("outputs/chilako_map.png", width = 10, height = 8, dpi = 300, bg = "white")
+```
+
+### Plotting with mapview
+
+For exploring, not for reports.
+
+```{r}
+#| label: mapview
+#| cache: false
+library(mapview)
+mapview(cutblocks, zcol = "HARVEST_YEAR")
+```
+
+```{r}
+#| label: mapview-layers
+#| cache: false
+mapview(ws, alpha.regions = 0) +
+  mapview(fires, col.regions = "orange") +
+  mapview(lakes, col.regions = "steelblue") +
+  mapview(loggers_sf, col.regions = "red")
+```
+
+Two things to know: mapview reprojects to Web Mercator for display — your data are still in 3005 — and its output cannot be cached, so any chunk that calls it needs `#| cache: false` if you turn caching on.
+
+## Before you leave {.unnumbered}
+
+- `part1.qmd` renders from a fresh session (Ctrl+Shift+F10, then Ctrl+Shift+K)
+- `outputs/` has `harvest_hist.png` and `chilako_map.png`
+- Committed and pushed; `data/` is not in the repo
+
+Next: Part 2, *Simple Features in R with sf*.

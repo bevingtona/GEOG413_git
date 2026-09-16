@@ -1,0 +1,10 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+.html
+
+GEOG_413_Lab1/data/
+GEOG_413_Lab1/outputs/
+GEOG_413_Lab1/lab_part1_r_basics_cache/
+GEOG_413_Lab1/lab_part1_r_basics_files/
