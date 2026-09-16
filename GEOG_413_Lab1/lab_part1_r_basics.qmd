@@ -27,13 +27,7 @@ body { font-family: Calibri, "Segoe UI", Arial, sans-serif; }
 </style>
 ```
 
-## Purpose {.unnumbered}
-
-Part 1 gets you from a fresh install to a rendered document that reads spatial data, summarises it and maps it. Part 2 (*Simple Features in R with sf*) then works through the `sf` package properly. Everything runs on `data/chilako.gpkg` from the course site.
-
-Work through it in order, typing the code into your own `part1.qmd`. Render at the end of every section.
-
-## Welcome to RStudio
+# Welcome to RStudio
 
 ### RStudio basics
 
