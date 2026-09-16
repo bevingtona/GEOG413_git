@@ -95,18 +95,21 @@ Projects in R Studio, make it so that all code in the project uses a common work
 
 ### Get data for Lab
 
-```{r}
+```{bash}
 #| label: git_clone
 #| eval: false
-setwd("K:/")
-system("git clone https://github.com/bevingtona/GEOG413_git") 
+# In the terminal, navigate to K: using 
+cd K:
+# Then clone the repo using
+git clone https://github.com/bevingtona/GEOG413_git
 ```
-
 Open the `GEOG_413_Labs.Rproj`, open `lab_part1_r_basics.qmd` then run:
 
 ```{r}
 #| label: download_data
 #| eval: false
+if (!requireNamespace("bcdata", quietly = TRUE)) {install.packages("bcdata", type = "binary")}
+library(bcdata)
 source("00_make_data.R")
 ```
 
