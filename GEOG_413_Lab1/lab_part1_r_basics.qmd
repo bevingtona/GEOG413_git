@@ -8,13 +8,13 @@ format:
     number-sections: true
     code-tools: true
     code-copy: true
-    embed-resources: false
+    embed-resources: true
     theme: default
 execute:
   echo: true
   message: false
   warning: false
-  cache: true
+  cache: false
   fig-width: 8
   fig-height: 5
 editor_options:
@@ -25,9 +25,6 @@ editor_options:
 <style>
 body { font-family: Calibri, "Segoe UI", Arial, sans-serif; }
 </style>
-
-options("mapviewBasemaps" = c("Esri.WorldGrayCanvas","OpenStreetMap", "Esri.WorldImagery", "OpenTopoMap"))
-
 ```
 
 ## Purpose {.unnumbered}
@@ -40,10 +37,10 @@ Work through it in order, typing the code into your own `part1.qmd`. Render at t
 
 ### RStudio basics
 
-**R** is the language and the engine. **RStudio** is the workbench around it (The "IDE"). The RStudio IDE typically has four panes that can be customized. Here is what they do: 
+**R** is the language and the engine. **RStudio** is the workbench around it (The "IDE"). The RStudio IDE typically has four panes that can be customized. Here is what they do:
 
 | Pane | Use it for |
-|---|---|
+|----|----|
 | Source (top-left) | Scripts and `.qmd` files — things you keep |
 | Console (bottom-left) | Trying one line; nothing here is saved |
 | Environment / History (top-right) | What objects exist right now |
@@ -66,16 +63,16 @@ x * 3
 
 Shortcuts to learn today:
 
-| Keys | Does |
-|---|---|
-| Ctrl+Enter | run the current line or selection |
-| Ctrl+Shift+Enter | run the whole chunk |
-| Ctrl+Shift+M | insert a pipe `|>` |
-| Alt+- | insert left-assignment `<-` 
-| Ctrl+Shift+C | comment / uncomment |
-| Ctrl+Shift+K | render the document |
-| Ctrl+Shift+F10 | restart R |
-| Tab | autocomplete — start typing a function then Tab |
+| Keys             | Does                                            |
+|------------------|-------------------------------------------------|
+| Ctrl+Enter       | run the current line or selection               |
+| Ctrl+Shift+Enter | run the whole chunk                             |
+| Ctrl+Shift+M     | insert a pipe `|>`                              |
+| Alt+-            | insert left-assignment `<-`                     |
+| Ctrl+Shift+C     | comment / uncomment                             |
+| Ctrl+Shift+K     | render the document                             |
+| Ctrl+Shift+F10   | restart R                                       |
+| Tab              | autocomplete — start typing a function then Tab |
 
 ### RStudio settings (no `.RData`!)
 
@@ -83,44 +80,40 @@ Shortcuts to learn today:
 
 - Your script should rebuild everything from the data files, not from restoring previously assigned variables. A saved workspace hides the fact that a script may no longer work. Another way to do this is : *Session → Restart R*, then run your script from top to bottom.
 
-  - **Untick** *Restore most recently opened project at startup *
+  - **Untick** *Restore most recently opened project at startup*
   - **Untick** *Restore .RData into workspace at startup*
   - Set *Save workspace to .RData on exit* to **Never**
 
-- *Tools → Global Options → Code*: 
+- *Tools → Global Options → Code*:
 
-  - Turn on *Use native pipe operator, |>*. Some of you may be familiar with the `dplyr` pipe (`%>%`), now there is a pipe built into R!
+  - Turn on *Use native pipe operator, \|\>*. Some of you may be familiar with the `dplyr` pipe (`%>%`), now there is a pipe built into R!
   - Under *Display*, tick *Show line numbers* and turn on *Use rainbow parentheses*!
 
 ### The Working Directory
 
-The working directory can bee seen at the top of the Console pane. You can also find it through code with `getwd()`, and you can change it with `setwd()`. Keep in mind file paths in R need to have 
-- Wrong: `K:\GEOG413_git\GEOG_413_Lab1`
-- Right: `K:/GEOG413_git/GEOG_413_Lab1`
-Managing the working directory is important! 
+The working directory can bee seen at the top of the Console pane. You can also find it through code with `getwd()`, and you can change it with `setwd()`. Keep in mind file paths in R need to have - Wrong: `K:\GEOG413_git\GEOG_413_Lab1` - Right: `K:/GEOG413_git/GEOG_413_Lab1` Managing the working directory is important!
 
 ### RStudio Projects
 
-Projects in R Studio, make it so that all code in the project uses a common working directory, which helps make the code more portable. 
+Projects in R Studio, make it so that all code in the project uses a common working directory, which helps make the code more portable.
 
-*File → New Project → * ... there are three options. 
+*File → New Project →* ... there are three options.
 
 ### Get data for Lab
 
 ```{r}
+#| label: git_clone
+#| eval: false
 setwd("K:/")
 system("git clone https://github.com/bevingtona/GEOG413_git") 
 ```
 
-Open the `GEOG_413_Labs.Rproj`
+Open the `GEOG_413_Labs.Rproj`, open `lab_part1_r_basics.qmd` then run:
 
 ```{r}
-setwd("K:/GEOG413_git/")
-source("GEOG_413_Lab1/00_make_data.R")
-```
-
-```{r}
-
+#| label: download_data
+#| eval: false
+source("00_make_data.R")
 ```
 
 ```{r}
@@ -138,7 +131,7 @@ setwd("C:/Users/mycomputer/OneDrive/UNBC/GEOG413/lab")
 
 A tidy project:
 
-```
+```         
 geog413-lab/
 ├── data/        inputs (add to .gitignore — never commit data to GitHub)
 ├── outputs/     what you make
@@ -182,7 +175,7 @@ plot(st_geometry(ws))
 
 **`.qmd`** — Quarto: prose and code together, rendered to HTML with Ctrl+Shift+K.
 
-````markdown
+```` markdown
 ---
 title: "Chilako watershed"
 format: html
@@ -257,8 +250,7 @@ as.numeric("abc")                          # NA with a warning: check your data
 
 **Dates** are strings until you say otherwise.
 
-YYYY-MM-DD PREFERRED!!!!! 
-%Y-%m-%d
+YYYY-MM-DD PREFERRED!!!!! %Y-%m-%d
 
 ```{r}
 #| label: dates
@@ -594,9 +586,12 @@ st_centroid(lakes) |> head(3)
 
 ```{r}
 #| label: predicates
-#| cache: false
 
 library(mapview)
+# FIX FOR KNOWN ISSUE WITH MAPVIEW DEFAULT BASEMAP 'CARTO' REQUIRING API KEY
+options("mapviewBasemaps" = c("Esri.WorldGrayCanvas","OpenStreetMap", "Esri.WorldImagery", "OpenTopoMap"))
+
+
 big_fire <- fires |> slice_max(st_area(geom), n = 1)
 
 st_intersects(big_fire, cutblocks)              # sparse list of matching indices
@@ -607,15 +602,15 @@ cutblocks[big_fire, , op = st_within] |> nrow() # any predicate via op
 cutblocks |> st_filter(big_fire) |> nrow()      # same, pipeable
 cutblocks_bigfire <- cutblocks |> st_filter(big_fire)
 
-mapview(big_fire, col.regions = "red") + 
-  mapview::mapview(cutblocks_bigfire, col.regions = "green")
+# mapview(big_fire, col.regions = "red") + 
+#   mapview::mapview(cutblocks_bigfire, col.regions = "green")
 
 cutblocks_bigfire_nearlake <- cutblocks_bigfire |> 
   st_is_within_distance(lakes, units::set_units(200, m))
 
-mapview(big_fire, col.regions = "red") + 
-  mapview(cutblocks_bigfire, col.regions = "green") + 
-  mapview(cutblocks_bigfire[lengths(cutblocks_bigfire_nearlake) > 0, ], col.regions = "blue")
+# mapview(big_fire, col.regions = "red") + 
+#   mapview(cutblocks_bigfire, col.regions = "green") + 
+#   mapview(cutblocks_bigfire[lengths(cutblocks_bigfire_nearlake) > 0, ], col.regions = "blue")
 ```
 
 Measures come back with units:
@@ -718,6 +713,7 @@ For exploring, not for reports.
 ```{r}
 #| label: mapview
 #| cache: false
+#| eval: false
 library(mapview)
 mapview(cutblocks, zcol = "HARVEST_YEAR")
 ```
@@ -725,6 +721,8 @@ mapview(cutblocks, zcol = "HARVEST_YEAR")
 ```{r}
 #| label: mapview-layers
 #| cache: false
+#| eval: false
+
 mapview(ws, alpha.regions = 0) +
   mapview(fires, col.regions = "orange") +
   mapview(lakes, col.regions = "steelblue") +
@@ -733,10 +731,6 @@ mapview(ws, alpha.regions = 0) +
 
 Two things to know: mapview reprojects to Web Mercator for display — your data are still in 3005 — and its output cannot be cached, so any chunk that calls it needs `#| cache: false` if you turn caching on.
 
-## Before you leave {.unnumbered}
+## Homework {.unnumbered}
 
-- `part1.qmd` renders from a fresh session (Ctrl+Shift+F10, then Ctrl+Shift+K)
-- `outputs/` has `harvest_hist.png` and `chilako_map.png`
-- Committed and pushed; `data/` is not in the repo
-
-Next: Part 2, *Simple Features in R with sf*.
+- Run through this a few times! Add notes and comments if helpful.
